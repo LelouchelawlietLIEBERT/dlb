@@ -3,77 +3,68 @@
 
 #define N 3
 
-// Function to check if woman w prefers man m over her current partner m1
-bool prefers(int preferences[N][N], int w, int m, int m1) {
+bool womanPrefersNewMan(int wp[N][N], int woman, int newMan, int currentMan) {
     for (int i = 0; i < N; i++) {
-        if (preferences[w][i] == m1)
+        if (wp[woman][i] == newMan)
             return true;
-        if (preferences[w][i] == m)
+        if (wp[woman][i] == currentMan)
             return false;
     }
     return false;
 }
 
-// Function to perform the stable marriage algorithm
-void stableMarriage(int preferences[N][N]) {
-    int womenPartner[N];
-    bool menFree[N];
-    
-    // Initialize all women as free and all men as free
+void stableMatch(int mp[N][N], int wp[N][N]) {
+    int womanPartner[N];   // womanPartner[i] = man's index that woman i is engaged to
+    bool manFree[N];       // manFree[i] = true if man i is free
+    int nextProposal[N] = {0}; // Next woman to propose for each man
+    int freeCount = N;
+
     for (int i = 0; i < N; i++) {
-        womenPartner[i] = -1;
-        menFree[i] = true;
+        womanPartner[i] = -1;
+        manFree[i] = true;
     }
-    
-    int freeCount = N; // Number of free men
-    
-    // While there are free men
+
     while (freeCount > 0) {
         int m;
-        // Find the first free man
-        for (m = 0; m < N; m++) {
-            if (menFree[m])
+        for (m = 0; m < N; m++)
+            if (manFree[m])
                 break;
-        }
-        
-        // For each woman in man's preference list
-        for (int i = 0; i < N && menFree[m]; i++) {
-            int w = preferences[m][i]; // Woman w is the ith preference of man m
-            
-            // If woman w is free
-            if (womenPartner[w] == -1) {
-                womenPartner[w] = m; // Pair m and w
-                menFree[m] = false;  // Man m is no longer free
-                freeCount--;         // Decrease the number of free men
-            } else {
-                // If woman w is not free, find her current partner
-                int m1 = womenPartner[w];
-                
-                // If woman w prefers man m over her current partner m1
-                if (prefers(preferences, w, m, m1) == false) {
-                    womenPartner[w] = m; // Woman w pairs with man m
-                    menFree[m] = false;  // Man m is no longer free
-                    menFree[m1] = true;  // Man m1 is now free
-                }
+
+        int w = mp[m][nextProposal[m]++];
+
+        if (womanPartner[w] == -1) {
+            womanPartner[w] = m;
+            manFree[m] = false;
+            freeCount--;
+        } else {
+            int m1 = womanPartner[w];
+            if (womanPrefersNewMan(wp, w, m, m1)) {
+                womanPartner[w] = m;
+                manFree[m] = false;
+                manFree[m1] = true;
             }
         }
     }
-    
-    // Print the stable matches
-    printf("Stable matches:\n");
-    for (int i = 0; i < N; i++) {
-        printf("Woman %d - Man %d\n", i, womenPartner[i]);
-    }
+
+    printf("Woman  -  Man\n");
+    for (int i = 0; i < N; i++)
+        printf("  %d     -   %d\n", i, womanPartner[i]);
 }
 
 int main() {
-    // Preference lists for men and women
-    int preferences[N][N] = {
-        {0, 1, 2}, // Preferences of Man 0
-        {1, 0, 2}, // Preferences of Man 1
-        {0, 1, 2}, // Preferences of Man 2
+    int mp[N][N] = {
+        {0, 1, 2},
+        {2, 0, 1},
+        {1, 2, 0}
     };
-    
-    stableMarriage(preferences); // Find and print stable matches
+
+    int wp[N][N] = {
+        {0, 1, 2},
+        {2, 0, 1},
+        {1, 2, 0}
+    };
+
+    stableMatch(mp, wp);
+
     return 0;
 }

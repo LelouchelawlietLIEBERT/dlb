@@ -1,0 +1,13 @@
+subjects = ["Math", "Data Structures", "OS", "Python Programming Lab", "DBMS", "AI"]
+for s in subjects: print(s)
+print(subjects[1], subjects[4])
+print(subjects[:4])
+print(subjects[-4:])
+print("Python Programming Lab" in subjects)
+subjects.append("ML")
+subjects.insert(2, "CN")
+subjects.remove("CN")
+subjects.pop()
+subjects.extend(["18CS42", "18CS43"])
+print(sorted(subjects))
+print(sorted(subjects, reverse=True))

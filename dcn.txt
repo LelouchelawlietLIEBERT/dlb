@@ -1,0 +1,529 @@
+1. CRC checksum:
+
+#include <stdio.h>
+#include <string.h>
+
+#define N strlen(g)
+
+char t[28], cs[28], g[] = "10001000000100001";
+int a, e, c;
+
+void xor() {
+    for (c = 1; c < N; c++)
+        cs[c] = (cs[c] == g[c]) ? '0' : '1';
+}
+
+void crc() {
+    for (e = 0; e < N; e++)
+        cs[e] = t[e];
+
+    do {
+        if (cs[0] == '1')
+            xor();
+
+        for (c = 0; c < N - 1; c++)
+            cs[c] = cs[c + 1];
+
+        cs[c] = t[e++];
+    } while (e <= a + N - 1);
+}
+
+int main() {
+    int error_choice, error_position;
+
+    printf("\nEnter data: ");
+    scanf("%s", t);
+
+    printf("\nGenerating polynomial: %s", g);
+    printf("\nLength of generator polynomial (N): %d", N);
+
+    a = strlen(t);
+
+    // Append N-1 zeros to data
+    for (e = a; e < a + N - 1; e++)
+        t[e] = '0';
+    t[e] = '\0';
+
+    printf("\nModified data is: %s", t);
+
+    crc();
+
+    printf("\nCRC checksum is: %s", cs);
+
+    // Append checksum to original data
+    for (e = a; e < a + N - 1; e++)
+        t[e] = cs[e - a];
+
+    printf("\nFinal codeword transmitted is: %s", t);
+
+    printf("\n\nTest error detection? (0 = Yes, 1 = No): ");
+    scanf("%d", &error_choice);
+
+    if (error_choice == 0) {
+        do {
+            printf("Enter the position where error is to be inserted: ");
+            scanf("%d", &error_position);
+        } while (error_position <= 0 || error_position > a + N - 1);
+
+        // Introduce error
+        t[error_position - 1] = (t[error_position - 1] == '0') ? '1' : '0';
+
+        printf("\nErroneous data: %s\n", t);
+    }
+
+    crc();
+
+    for (e = 0; (e < N - 1) && (cs[e] != '1'); e++);
+
+    if (e < N - 1) {
+        printf("\nCRC checksum is: %s", cs);
+        printf("\nError detected!\n\n");
+    } else {
+        printf("\nCRC checksum is: %s", cs);
+        printf("\nNo error detected.\n\n");
+    }
+
+    return 0;
+}
+
+
+2. Hamming code:
+
+#include <stdio.h>
+
+int main() {
+    int data[7], dataatrec[7];
+    int c, c1, c2, c3, i;
+
+    printf("Enter 4 bits of data one by one:\n");
+    scanf("%d", &data[0]);
+    scanf("%d", &data[1]);
+    scanf("%d", &data[2]);
+    scanf("%d", &data[4]);  // Note: data[3] and data[5], data[6] are parity bits
+
+    // Calculate parity bits (even parity)
+    data[6] = data[0] ^ data[2] ^ data[4];  // parity bit p1
+    data[5] = data[0] ^ data[1] ^ data[4];  // parity bit p2
+    data[3] = data[0] ^ data[1] ^ data[2];  // parity bit p3
+
+    printf("\nEncoded data is:\n");
+    for(i = 0; i < 7; i++) {
+        printf("%d ", data[i]);
+    }
+    printf("\n");
+
+    printf("Enter received data bits one by one:\n");
+    for(i = 0; i < 7; i++) {
+        scanf("%d", &dataatrec[i]);
+    }
+
+    // Calculate syndrome bits to detect error position
+    c1 = dataatrec[6] ^ dataatrec[4] ^ dataatrec[2] ^ dataatrec[0];
+    c2 = dataatrec[5] ^ dataatrec[4] ^ dataatrec[1] ^ dataatrec[0];
+    c3 = dataatrec[3] ^ dataatrec[2] ^ dataatrec[1] ^ dataatrec[0];
+
+    c = c3 * 4 + c2 * 2 + c1;
+
+    if(c == 0) {
+        printf("No error while transmission of data\n");
+    } else {
+        printf("Error detected at position: %d\n", c);
+        printf("Data sent: ");
+        for(i = 0; i < 7; i++) {
+            printf("%d", data[i]);
+        }
+        printf("\nData received: ");
+        for(i = 0; i < 7; i++) {
+            printf("%d", dataatrec[i]);
+        }
+        printf("\n");
+
+        // Correct the error bit (flip it)
+        int error_pos = 7 - c;  // 7 - c to convert position for array index
+        dataatrec[error_pos] = (dataatrec[error_pos] == 0) ? 1 : 0;
+
+        printf("Corrected data is:\n");
+        for(i = 0; i < 7; i++) {
+            printf("%d", dataatrec[i]);
+        }
+        printf("\n");
+    }
+
+    return 0;
+}
+
+
+3. leaky bucket:
+
+#include <stdio.h>
+
+int main() {
+    int incoming, outgoing, bucket_capacity, n, store = 0;
+
+    printf("Enter bucket capacity, outgoing rate, and number of inputs: ");
+    scanf("%d %d %d", &bucket_capacity, &outgoing, &n);
+
+    while (n > 0) {
+        printf("\nEnter the number of incoming packets: ");
+        scanf("%d", &incoming);
+        printf("Incoming packet size: %d\n", incoming);
+
+        // Add incoming packets to the bucket if there is space
+        if (incoming <= bucket_capacity - store) {
+            store += incoming;
+        } else {
+            int dropped = incoming - (bucket_capacity - store);
+            store = bucket_capacity;  // bucket is full now
+            printf("%d packets dropped!\n", dropped);
+        }
+
+        // Send packets according to outgoing rate
+        int sent = (store >= outgoing) ? outgoing : store;
+        store -= sent;
+
+        printf("%d packets sent out\n", sent);
+        printf("%d out of %d space used in the buffer\n", store, bucket_capacity);
+
+        n--;
+    }
+
+    return 0;
+}
+
+
+4 Dijkstras code:
+
+#include <stdio.h>
+
+#define V 5          // Number of vertices
+#define INF 9999     // A large number representing infinity
+
+// Function to find the vertex with the minimum distance
+int minDistance(int dist[], int visited[]) {
+    int min = INF, index = -1;
+
+    for (int v = 0; v < V; v++) {
+        if (!visited[v] && dist[v] <= min) {
+            min = dist[v];
+            index = v;
+        }
+    }
+    return index;
+}
+
+// Dijkstra's algorithm function
+int dijkstra(int graph[V][V], int src, int dest) {
+    int dist[V];            // Holds the shortest distances from source
+    int visited[V] = {0};   // Marks visited vertices
+
+    // Initialize all distances as infinite
+    for (int i = 0; i < V; i++)
+        dist[i] = INF;
+    dist[src] = 0; // Distance from source to itself is 0
+
+    for (int count = 0; count < V - 1; count++) {
+        int u = minDistance(dist, visited);  // Pick the nearest unvisited vertex
+
+        if (u == -1)
+            break;
+
+        visited[u] = 1; // Mark the vertex as visited
+
+        // Update the distance of adjacent vertices
+        for (int v = 0; v < V; v++) {
+            if (!visited[v] && graph[u][v] && dist[u] + graph[u][v] < dist[v]) {
+                dist[v] = dist[u] + graph[u][v];
+            }
+        }
+    }
+
+    return dist[dest];
+}
+
+int main() {
+    // Graph represented as an adjacency matrix
+    int graph[V][V] = {
+        {0, 10, 0, 0, 5},
+        {0, 0, 1, 0, 2},
+        {0, 0, 0, 4, 0},
+        {7, 0, 6, 0, 0},
+        {0, 3, 9, 2, 0}
+    };
+
+    int source, destination;
+
+    printf("Enter source node (0 to %d): ", V - 1);
+    scanf("%d", &source);
+    printf("Enter destination node (0 to %d): ", V - 1);
+    scanf("%d", &destination);
+
+    if (source < 0 || source >= V || destination < 0 || destination >= V) {
+        printf("Invalid input. Nodes must be between 0 and %d.\n", V - 1);
+        return 1;
+    }
+
+    int distance = dijkstra(graph, source, destination);
+
+    if (distance != INF)
+        printf("Shortest distance from %d to %d is: %d\n", source, destination, distance);
+    else
+        printf("No path exists from %d to %d\n", source, destination);
+
+    return 0;
+}
+
+
+5. Bellman ford:
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define INFINITY 99999
+
+// Struct for an edge in the graph
+struct Edge {
+    int u;  // Start vertex of the edge
+    int v;  // End vertex of the edge
+    int w;  // Weight of the edge
+};
+
+// Struct for the graph
+struct Graph {
+    int V; // Number of vertices
+    int E; // Number of edges
+    struct Edge *edge; // Array of edges
+};
+
+// Function declarations
+void bellmanford(struct Graph *g, int source);
+void display(int arr[], int size);
+
+int main() {
+    struct Graph *g = (struct Graph *)malloc(sizeof(struct Graph));
+    g->V = 4; // Total vertices
+    g->E = 5; // Total edges
+
+    // Allocate memory for edges
+    g->edge = (struct Edge *)malloc(g->E * sizeof(struct Edge));
+
+    // Add edges
+    g->edge[0].u = 0;
+    g->edge[0].v = 1;
+    g->edge[0].w = 5;
+
+    g->edge[1].u = 0;
+    g->edge[1].v = 2;
+    g->edge[1].w = 4;
+
+    g->edge[2].u = 1;
+    g->edge[2].v = 3;
+    g->edge[2].w = 3;
+
+    g->edge[3].u = 2;
+    g->edge[3].v = 1;
+    g->edge[3].w = 6;
+
+    g->edge[4].u = 3;
+    g->edge[4].v = 2;
+    g->edge[4].w = 2;
+
+    bellmanford(g, 0);  // 0 is the source vertex
+
+    return 0;
+}
+
+void bellmanford(struct Graph *g, int source) {
+    int V = g->V;
+    int E = g->E;
+    int d[V]; // Distance array
+    int p[V]; // Predecessor array
+
+    // Step 1: Initialize distances
+    for (int i = 0; i < V; i++) {
+        d[i] = INFINITY;
+        p[i] = -1;
+    }
+    d[source] = 0;
+
+    // Step 2: Relax all edges V-1 times
+    for (int i = 1; i <= V - 1; i++) {
+        for (int j = 0; j < E; j++) {
+            int u = g->edge[j].u;
+            int v = g->edge[j].v;
+            int w = g->edge[j].w;
+
+            if (d[u] != INFINITY && d[u] + w < d[v]) {
+                d[v] = d[u] + w;
+                p[v] = u;
+            }
+        }
+    }
+
+    // Step 3: Check for negative weight cycles
+    for (int i = 0; i < E; i++) {
+        int u = g->edge[i].u;
+        int v = g->edge[i].v;
+        int w = g->edge[i].w;
+
+        if (d[u] != INFINITY && d[u] + w < d[v]) {
+            printf("Negative weight cycle detected!\n");
+            return;
+        }
+    }
+
+    // No negative weight cycle found
+    printf("Distance array: ");
+    display(d, V);
+
+    printf("Predecessor array: ");
+    display(p, V);
+}
+
+// Function to display an array
+void display(int arr[], int size) {
+    for (int i = 0; i < size; i++) {
+        printf("%d ", arr[i]);
+    }
+    printf("\n");
+}
+
+
+
+
+6. Client Server:
+
+#include <stdio.h> // For standard I/O functions like printf(), perror(), fopen(), etc.
+ #include <stdlib.h> // For exit() 
+#include <string.h> // For string operations like strcpy(), strlen() 
+#include <unistd.h> // For close() system call
+ #include <netinet/in.h> // For sockaddr_in structure and constants like AF_INET 
+#include <arpa/inet.h> // For htons(), inet_addr()
+#define PORT 8080 // Define port number the server will listen on 
+#define BUFFER_SIZE 1024 // Define the maximum size for data buffer
+int main() 
+{ int server_fd, new_socket; // Socket file descriptors 
+struct sockaddr_in address; // Struct to hold server address info 
+socklen_t addrlen = sizeof(address); // Size of the address structure
+ char buffer[BUFFER_SIZE] = {0}; // Buffer to receive file name or send data 
+FILE *file; // File pointer for reading requested file
+// ----------------------------
+// Step 1: Create a socket
+// ----------------------------
+server_fd = socket(AF_INET, SOCK_STREAM, 0);
+if (server_fd == 0) {
+    perror("Socket failed");
+    exit(EXIT_FAILURE);
+}
+
+// ----------------------------
+// Step 2: Bind socket to IP/PORT
+// ----------------------------
+address.sin_family = AF_INET;            // Use IPv4
+address.sin_addr.s_addr = INADDR_ANY;    // Accept connections from any IP address
+address.sin_port = htons(PORT);          // Convert port number to network byte order
+
+if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+    perror("Bind failed");
+    close(server_fd);
+    exit(EXIT_FAILURE);
+}
+
+// ----------------------------
+// Step 3: Listen for connections
+// ----------------------------
+listen(server_fd, 3);   // Queue up to 3 pending connections
+printf("Server listening on port %d...\n", PORT);
+
+// ----------------------------
+// Step 4: Accept a connection from client
+// ----------------------------
+new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen);
+if (new_socket < 0) {
+    perror("Accept failed");
+    exit(EXIT_FAILURE);
+}
+
+// ----------------------------
+// Step 5: Receive file name from client
+// ----------------------------
+recv(new_socket, buffer, BUFFER_SIZE, 0);   // Receive file name
+printf("Client requested file: %s\n", buffer);
+
+// ----------------------------
+// Step 6: Try to open the requested file
+// ----------------------------
+file = fopen(buffer, "r");
+if (file == NULL) {
+    // File not found, send error message to client
+    strcpy(buffer, "Error: File not found.\n");
+    send(new_socket, buffer, strlen(buffer), 0);
+} else {
+    // File found, send contents line by line
+    while (fgets(buffer, BUFFER_SIZE, file) != NULL) {
+        send(new_socket, buffer, strlen(buffer), 0);
+    }
+    fclose(file);
+}
+
+// ----------------------------
+// Step 7: Close sockets
+// ----------------------------
+close(new_socket);  // Close the connected socket
+close(server_fd);   // Close the listening socket
+
+return 0;
+ 
+}
+
+
+#include <stdio.h>
+ #include <stdlib.h> 
+#include <string.h> 
+#include <unistd.h> 
+#include <netinet/in.h> 
+#include <arpa/inet.h>
+#define PORT 8080 
+#define BUFFER_SIZE 1024
+int main() { int sock; struct sockaddr_in server_address; char buffer[BUFFER_SIZE] = {0}; char filename[100];
+// Create socket
+sock = socket(AF_INET, SOCK_STREAM, 0);
+if (sock < 0) {
+    perror("Socket creation error");
+    exit(EXIT_FAILURE);
+}
+
+server_address.sin_family = AF_INET;
+server_address.sin_port = htons(PORT);
+
+// Convert IPv4 address from text to binary form
+if (inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr) <= 0) {
+    printf("Invalid address\n");
+    return -1;
+}
+
+// Connect to server
+if (connect(sock, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
+    perror("Connection Failed");
+    return -1;
+}
+
+// Get file name from user
+printf("Enter the filename to request: ");
+fgets(filename, sizeof(filename), stdin);
+filename[strcspn(filename, "\n")] = 0; // Remove newline
+
+// Send file name to server
+send(sock, filename, strlen(filename), 0);
+
+// Receive file content
+printf("\nReceived from server:\n");
+int bytes_read;
+while ((bytes_read = recv(sock, buffer, BUFFER_SIZE - 1, 0)) > 0) {
+    buffer[bytes_read] = '\0';
+    printf("%s", buffer);
+}.  
+
+close(sock);
+return 0;
+ 
+}

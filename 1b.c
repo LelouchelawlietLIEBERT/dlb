@@ -1,22 +1,33 @@
 #include <stdio.h>
 #include <limits.h>
+#define N 5
 
-#define N 4
-int g[N][N]={{0,10,15,20},{10,0,35,25},{15,35,0,30},{20,25,30,0}};
+int cost[N][N] = {{0,4,0,8,0},{4,0,3,1,0},{0,3,0,7,8},{8,1,7,0,3},{0,0,8,3,0}};
 
-int main() {
-    int min=INT_MAX, path[N+1];
-    for(int s=0;s<N;s++){
-        int vis[N]={0}, cost=0, u=s, p[N+1]; p[0]=u; vis[u]=1;
-        for(int i=1;i<N;i++){
-            int n=-1,d=INT_MAX;
-            for(int j=0;j<N;j++)
-                if(!vis[j]&&g[u][j]<d) d=g[u][j],n=j;
-            vis[n]=1; cost+=d; u=n; p[i]=u;
+int main(){
+    int vis[N] = {0},path[N],total=0,curr=0;
+    path[0] = curr;
+    vis[curr] = 1;
+    for(int count=1;count<N;count++){
+        int next=-1,min=INT_MAX;
+        for(int j=0;j<N;j++){
+            if(!vis[j] && cost[curr][j] && cost[curr][j]<min){
+                min = cost[curr][j];
+                next = j;
+            }
         }
-        cost+=g[u][s]; p[N]=s;
-        if(cost<min){ min=cost; for(int i=0;i<=N;i++) path[i]=p[i]; }
+        if(next==-1) break;
+        vis[next] = 1;
+        path[count] = next;
+        total+=min;
+        curr = next;
     }
-    printf("Cost: %d\nPath: ",min);
-    for(int i=0;i<=N;i++) printf("%d ",path[i]);
+    printf("Total cost : %d\n",total);
+    printf("Path : \n");
+    for (int i = 0; i < N; i++)
+    {
+        printf("%d\t",path[i]+1);
+    }
+    
+    return 0;
 }

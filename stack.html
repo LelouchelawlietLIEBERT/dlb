@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>Stack & Queue</title></head>
+<body>
+  <input id="val" placeholder="Value">
+  <button onclick="s.push(val.value)">Push Stack</button>
+  <button onclick="s.pop()">Pop Stack</button>
+  <button onclick="q.push(val.value)">Enqueue</button>
+  <button onclick="q.pop()">Dequeue</button>
+  <p id="stack"></p>
+  <p id="queue"></p>
+  <script>
+    class DS {
+      constructor(id) { this.items = []; this.id = id; this.render(); }
+      push(x) { if(x) this.items.push(x); this.render(); }
+      pop() { this.items.length ? (this.id==='queue' ? this.items.shift() : this.items.pop()) : alert('Empty!'); this.render(); }
+      render() { document.getElementById(this.id).textContent = this.id + ": [" + this.items.join(", ") + "]"; }
+    }
+    const s = new DS('stack'), q = new DS('queue');
+  </script>
+</body>
+</html>

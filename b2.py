@@ -1,17 +1,54 @@
-import requests
 
-username = "ar363"  # ← Replace with your GitHub username
-url = f"https://api.github.com/users/{username}/repos"
-response = requests.get(url)
+import json
+import xml.etree.ElementTree as ET
 
-if response.status_code == 200:
-    repos = response.json()
-    latest_five = sorted(repos, key=lambda x: x['created_at'], reverse=True)[:5]
-    for repo in latest_five:
-        print("Name:", repo['name'])
-        print("Created at:", repo['created_at'])
-        print("Language:", repo.get('language', 'None'))
-        print("---")
+# JSON data
+json_data = """
+{
+    "title": "Data Science Book",
+    "author": "Joel Grus",
+    "publicationYear": 2019,
+    "topics": ["data", "science", "data science"]
+}
+"""
+
+# XML data
+xml_data = """
+<book>
+    <title>Data Science Book</title>
+    <author>Joel Grus</author>
+    <publicationYear>2019</publicationYear>
+    <topics>
+        <topic>data</topic>
+        <topic>science</topic>
+        <topic>data science</topic>
+    </topics>
+</book>
+"""
+
+# --- JSON Parsing and Validation ---
+print("JSON Check:")
+data_json = json.loads(json_data)
+if data_json["publicationYear"] == 2019:
+    print("Success!")
 else:
-    print("Failed to fetch data:", response.status_code)
+    print("Failed!")
+if "data science" in data_json["topics"]:
+    print("Success!")
+else:
+    print("Failed!")
 
+# --- XML Parsing and Validation ---
+print("\nXML Check:")
+root = ET.fromstring(xml_data)
+pub_year_xml = int(root.find("publicationYear").text)
+topics_xml = [topic.text for topic in root.find("topics").findall("topic")]
+
+if pub_year_xml == 2019:
+    print("Success!")
+else:
+    print("Failed!")
+if "data science" in topics_xml:
+    print("Success!")
+else:
+    print("Failed!")

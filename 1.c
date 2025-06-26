@@ -14,9 +14,9 @@ bool womanPrefersNewMan(int wp[N][N], int woman, int newMan, int currentMan) {
 }
 
 void stableMatch(int mp[N][N], int wp[N][N]) {
-    int womanPartner[N];   // womanPartner[i] = man's index that woman i is engaged to
-    bool manFree[N];       // manFree[i] = true if man i is free
-    int nextProposal[N] = {0}; // Next woman to propose for each man
+    int womanPartner[N];   
+    bool manFree[N];      
+    int nextProposal[N] = {0};
     int freeCount = N;
 
     for (int i = 0; i < N; i++) {

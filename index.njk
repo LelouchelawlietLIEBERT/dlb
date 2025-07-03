@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+  <body style="font-family: sans-serif; background:#f0f0f0;">
+    <h1>Engineering Branches</h1>
+    <ul>
+      {% for key, branch in branches %}
+        <li><a href="/{{ key }}">{{ branch.name }}</a></li>
+      {% endfor %}
+    </ul>
+  </body>
+</html>
+

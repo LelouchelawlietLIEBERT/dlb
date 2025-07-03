@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FinalYears Placement</title>
+</head>
+<body>
+  <h2>Add Student</h2>
+  <form action="/add-student" method="POST">
+    <input name="USN" placeholder="USN" required><br><br>
+    <input name="Name" placeholder="Name" required><br><br>
+    <input name="Company_name" placeholder="Company Name" required><br><br>
+    <button type="submit">Submit</button>
+  </form>
+
+  <h2>Infosys Selected Students</h2>
+  <ul id="infosys-list"></ul>
+
+  <script>
+    fetch('/infosys-students')
+      .then(res => res.json())
+      .then(data => {
+        const list = document.getElementById('infosys-list');
+        data.forEach(s => {
+          const li = document.createElement('li');
+          li.textContent = `${s.USN} - ${s.Name}`;
+          list.appendChild(li);
+        });
+      });
+  </script>
+</body>
+</html>

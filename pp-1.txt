@@ -1,0 +1,525 @@
+FOR MPI PROGRAMS
+mpicc filename.c -o filename
+mpirun -np 4 ./filename
+
+FOR OPENMP PROGRAMS 
+gcc -fopenmp filename.c -o filename
+./filename
+
+1.openmp pragma directive
+#include <stdio.h>
+#include <omp.h>
+int main() {
+printf("=== OpenMP Basic Demo (Q1) ===\n");
+#pragma omp parallel
+{
+int tid = omp_get_thread_num();
+printf("Hello from thread %d\n", tid);
+#pragma omp single
+{
+printf("\nNumber of threads: %d\n", omp_get_num_threads());
+printf("This part is executed by ONE thread only.\n\n");
+}
+
+#pragma omp for
+for (int i = 0; i < 8; i++) {
+printf("Thread %d is processing iteration %d\n", tid, i);
+}
+}
+return 0;
+}
+
+
+2.openmp parallel matrix mult
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+#define N 500
+void init_matrix(double mat[N][N]) {
+for (int i = 0; i < N; i++) {
+for (int j = 0; j < N; j++) {
+mat[i][j] = rand() % 10;
+}}}
+int main() {
+    static double A[N][N], B[N][N], C[N][N];
+    init_matrix(A);
+    init_matrix(B);
+    printf("Matrix multiplication of size %dx%d\n", N, N);
+    for (int t = 1; t <= 8; t *= 2) {
+        
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++)
+                C[i][j] = 0.0;
+        double start = omp_get_wtime();
+        #pragma omp parallel for num_threads(t) collapse(2)
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                double sum = 0.0;
+                for (int k = 0; k < N; k++) {
+                    sum += A[i][k] * B[k][j];
+                }
+                C[i][j] = sum;
+            }}
+double end = omp_get_wtime();
+printf("Threads: %d | Time: %f seconds\n", t, end - start);
+}
+return 0;
+}
+
+3.openmp parallel merge sort
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+void merge(int arr[], int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+    int *L = (int*)malloc(n1 * sizeof(int));
+    int *R = (int*)malloc(n2 * sizeof(int));
+    for (int i = 0; i < n1; i++) L[i] = arr[l + i];
+    for (int j = 0; j < n2; j++) R[j] = arr[m + 1 + j];
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        arr[k++] = (L[i] <= R[j]) ? L[i++] : R[j++];
+    }
+    while (i < n1) arr[k++] = L[i++];
+    while (j < n2) arr[k++] = R[j++];
+    free(L);
+    free(R);
+}
+void parallel_merge_sort(int arr[], int l, int r, int depth) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        if (depth > 0) {
+            #pragma omp parallel sections
+            {
+                #pragma omp section
+                parallel_merge_sort(arr, l, m, depth - 1);
+                #pragma omp section
+                parallel_merge_sort(arr, m + 1, r, depth - 1);
+            }
+        } else {
+            parallel_merge_sort(arr, l, m, 0);
+            parallel_merge_sort(arr, m + 1, r, 0);
+        }
+        merge(arr, l, m, r);
+    }}
+int main() {
+    int n = 1000000;
+    int *arr = (int*)malloc(n * sizeof(int));
+    for (int i = 0; i < n; i++) arr[i] = rand() % 1000000;
+    double start, end;
+    int *arr_copy = (int*)malloc(n * sizeof(int));
+    for (int i = 0; i < n; i++) arr_copy[i] = arr[i];
+    start = omp_get_wtime();
+    parallel_merge_sort(arr_copy, 0, n - 1, 0);
+    end = omp_get_wtime();
+    printf("Sequential time: %f s\n", end - start);
+    for (int i = 0; i < n; i++) arr_copy[i] = arr[i];
+    start = omp_get_wtime();
+    parallel_merge_sort(arr_copy, 0, n - 1, 4);
+    end = omp_get_wtime();
+    printf("Parallel time: %f s\n", end - start);
+    free(arr);
+    free(arr_copy);
+    return 0;
+}
+
+
+4.threadprivate and copyin
+#include <stdio.h>
+#include <omp.h>
+int global_var = 100;
+#pragma omp threadprivate(global_var)
+int main() {
+int i;
+int private_var = 10;
+int firstprivate_var = 20;
+int lastprivate_var = 0;
+omp_set_num_threads(4);
+printf("Before parallel region:\n");
+printf("global_var = %d, private_var = %d, firstprivate_var = %d, lastprivate_var = %d\n\n",
+global_var, private_var, firstprivate_var, lastprivate_var);
+#pragma omp parallel for private(private_var) firstprivate(firstprivate_var) lastprivate(lastprivate_var)
+for (i = 0; i < omp_get_num_threads(); i++) {
+int tid = omp_get_thread_num();
+global_var = 100 + tid;
+private_var = 10 + tid;
+firstprivate_var += tid;
+lastprivate_var = tid;
+printf("In thread %d: global_var = %d, private_var = %d, firstprivate_var = %d, lastprivate_var = %d\n",
+tid, global_var, private_var, firstprivate_var, lastprivate_var);
+}
+printf("\nAfter parallel region:\n");
+printf("global_var = %d\n", global_var);
+printf("private_var = %d\n", private_var);
+printf("firstprivate_var = %d\n", firstprivate_var);
+printf("lastprivate_var = %d\n", lastprivate_var);
+return 0;
+}
+
+
+5.scheduling
+#include <stdio.h>
+#include <omp.h>
+#define N 100
+#define CHUNK 10
+void print_schedule_info(const char *schedule_type, int i, int chunk) {
+printf("Thread %d executing a chunk at iteration %d\n",
+omp_get_thread_num(), i);
+}
+int main() {
+int i;
+printf("\n--- OpenMP Thread Schedule Example ---\n");
+printf("\n## 1: Static Scheduling (chunk size %d)\n", CHUNK);
+#pragma omp parallel for schedule(static, CHUNK)
+for (i = 0; i < N; i++) {
+print_schedule_info("Static", i, CHUNK);
+}
+printf("Static schedule complete\n");
+printf("\n## 2: Dynamic Scheduling (chunk size %d)\n", CHUNK);
+#pragma omp parallel for schedule(dynamic, CHUNK)
+for (i = 0; i < N; i++) {
+print_schedule_info("Dynamic", i, CHUNK);
+}
+printf("Dynamic schedule complete\n");
+printf("\n## 3: Guided Scheduling (min chunk size %d)\n", CHUNK);
+#pragma omp parallel for schedule(guided, CHUNK)
+for (i = 0; i < N; i++) {
+print_schedule_info("Guided", i, CHUNK);
+}
+printf("Guided schedule complete\n");
+return 0;
+}
+
+
+6.mpi scatter and reduce
+(mpirun -np 1 ./filename)
+#include <mpi.h>
+#include <stdio.h>
+#include <stdlib.h>
+int main(int argc, char** argv) {
+MPI_Init(&argc, &argv);
+int rank, size;
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+MPI_Comm_size(MPI_COMM_WORLD, &size);
+int N = 100;
+if (argc > 1) N = atoi(argv[1]);
+double *data = NULL;
+if (rank == 0) {
+data = malloc(sizeof(double) * N);
+for (int i = 0; i < N; ++i) data[i] = 1.0;
+}
+int chunk = N / size;
+double *local = malloc(sizeof(double) * chunk);
+MPI_Scatter(data, chunk, MPI_DOUBLE, local, chunk, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+double local_sum = 0.0;
+for (int i = 0; i < chunk; ++i) local_sum += local[i];
+double global_sum = 0.0;
+MPI_Reduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+if (rank == 0) {
+int start_rem = chunk * size;
+for (int i = start_rem; i < N; ++i) global_sum += data[i];
+printf("N=%d, size=%d -> Global sum = %.1f (expected ~%d)\n",
+N, size, global_sum, N);
+free(data);
+}
+free(local);
+MPI_Finalize();
+return 0;
+}
+
+
+
+7.point to point
+(mpirun -np 4 ./filename)
+#include <mpi.h>
+#include <stdio.h>
+int main(int argc, char** argv) {
+MPI_Init(&argc, &argv);
+int world_size, world_rank;
+MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+char name[MPI_MAX_PROCESSOR_NAME];
+int name_len;
+MPI_Get_processor_name(name, &name_len);
+printf("Hello from rank %d of %d on %s", world_rank, world_size, name);
+MPI_Finalize();
+return 0;
+}
+
+8.cuda kernel launch
+(if executing on visual studio don't put ! during compilation)
+#include <stdio.h>
+#include <cuda.h>
+__global__ void demoKernel() {
+int idx = blockIdx.x * blockDim.x + threadIdx.x;
+float x = idx * 0.1f;
+if (x < 0) printf("");
+}
+int main() {
+cudaDeviceProp prop;
+cudaGetDeviceProperties(&prop, 0);
+printf("=== GPU Device Properties ===\n");
+printf("Device Name: %s\n", prop.name);
+printf("Max Threads per Block: %d\n", prop.maxThreadsPerBlock);
+printf("Multiprocessor Count: %d\n\n", prop.multiProcessorCount);
+int blocks = 4;
+int threads = 256;
+printf("Launching kernel <<<%d blocks, %d threads>>>\n\n", blocks, threads);
+cudaEvent_t start, stop;
+float time_ms = 0.0f;
+cudaEventCreate(&start);
+cudaEventCreate(&stop);
+cudaEventRecord(start);
+demoKernel<<<blocks, threads>>>();
+cudaEventRecord(stop);
+cudaEventSynchronize(stop);
+cudaEventElapsedTime(&time_ms, start, stop);
+printf("Execution Time: %.6f ms\n", time_ms);
+cudaEventDestroy(start);
+cudaEventDestroy(stop);
+return 0;
+}
+
+!nvcc program8.cu -o program8
+!./program8
+
+9.cuda vector addition
+#include <stdio.h>
+#include <cuda.h>
+#define N 512
+__global__ void vectorAdd(int *a, int *b, int *c, int n) {
+int idx = threadIdx.x + blockIdx.x * blockDim.x;
+if (idx < n) {
+c[idx] = a[idx] + b[idx];
+}
+}
+int main() {
+int host_a[N], host_b[N], host_c[N];
+int *dev_a, *dev_b, *dev_c;
+for (int i = 0; i < N; i++) {
+host_a[i] = i;
+host_b[i] = N - i;
+}
+cudaMalloc((void**)&dev_a, N * sizeof(int));
+cudaMalloc((void**)&dev_b, N * sizeof(int));
+cudaMalloc((void**)&dev_c, N * sizeof(int));
+cudaMemcpy(dev_a, host_a, N * sizeof(int), cudaMemcpyHostToDevice);
+cudaMemcpy(dev_b, host_b, N * sizeof(int), cudaMemcpyHostToDevice);
+int threadsPerBlock = 256;
+int blocksPerGrid = (N + threadsPerBlock - 1) / threadsPerBlock;
+vectorAdd<<<blocksPerGrid, threadsPerBlock>>>(dev_a, dev_b, dev_c, N);
+cudaMemcpy(host_c, dev_c, N * sizeof(int), cudaMemcpyDeviceToHost);
+printf("Result (first 10 elements):\n");
+for (int i = 0; i < 10; i++) {
+printf("c[%d] = %d\n", i, host_c[i]);
+}
+cudaFree(dev_a);
+cudaFree(dev_b);
+cudaFree(dev_c);
+return 0;
+}
+
+!nvcc program9.cu -o program9
+!./program9
+
+
+11.linear regression
+import torch
+import torch.nn as nn
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+x = torch.tensor([[1.0], [2.0], [3.0], [4.0]], device=device)
+y = torch.tensor([[2.0], [4.0], [6.0], [8.0]], device=device)
+model = nn.Linear(in_features=1, out_features=1).to(device)
+criterion = nn.MSELoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+num_epochs = 1000
+for epoch in range(num_epochs):
+    y_pred = model(x)
+    loss = criterion(y_pred, y)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    if (epoch + 1) % 100 == 0:
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
+with torch.no_grad():
+    test_x = torch.tensor([[5.0]], device=device)
+    predicted = model(test_x)
+    print("Prediction for x=5:", predicted.item())
+
+python program_name.py
+
+12.
+import torch
+import torch.nn as nn
+import torch.optim as optim
+torch.manual_seed(0)
+X = torch.randn(500, 20)
+y = torch.randint(0, 3, (500,))
+class FFNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(20, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 3)
+    
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
+model = FFNN()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+for epoch in range(10):
+    outputs = model(X)
+    loss = criterion(outputs, y)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    print(f"Epoch {epoch+1} Loss: {loss.item():.4f}")
+with torch.no_grad():
+    _, predicted = torch.max(outputs, 1)
+    acc = (predicted == y).float().mean().item() * 100
+    print("Accuracy:", acc)
+
+python program_name.py
+
+
+13.FF neural network
+#include <stdio.h>
+#include <omp.h>
+static long num_steps = 100000;
+double step;
+int main() {
+step = 1.0 / (double) num_steps;
+double pi, sum;
+for (int num_threads = 1; num_threads <= 16; num_threads += 2) {
+sum = 0.0;
+double start_time = omp_get_wtime();
+#pragma omp parallel num_threads(num_threads)
+{
+double local_sum = 0.0;
+#pragma omp for
+for (int i = 0; i < num_steps; i++) {
+double x = (i + 0.5) * step;
+local_sum += 4.0 / (1.0 + x * x);
+}
+#pragma omp critical
+sum += local_sum;
+}
+pi = step * sum;
+double end_time = omp_get_wtime();
+printf("Threads: %d  Steps: %ld  Pi: %.9f  Time: %f seconds\n",num_threads, num_steps, pi, end_time - start_time);
+}
+return 0;
+}
+
+
+14.CUDA hello world
+#include <stdio.h>
+__global__ void helloKernel() {
+    printf("Hello from GPU thread %d\n", threadIdx.x);
+}
+int main() {
+    helloKernel<<<1, 5>>>();
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+!nvcc helloworld.cu -o helloworld
+!./helloworld
+
+
+15.CUDA Add two numbers
+#include <stdio.h>
+__global__ void addKernel(int a, int b, int *c) {
+    *c = a + b;
+}
+int main() {
+    int a = 7, b = 5, c;
+    int *d_c;
+
+    cudaMalloc(&d_c, sizeof(int));
+    addKernel<<<1,1>>>(a, b, d_c);
+    cudaMemcpy(&c, d_c, sizeof(int), cudaMemcpyDeviceToHost);
+
+    printf("Sum = %d\n", c);
+    cudaFree(d_c);
+    return 0;
+}
+
+
+
+
+16.CUDA Matrix Multiplication
+#include <stdio.h>
+#define N 16
+__global__ void matMul(int *A, int *B, int *C) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (row < N && col < N) {
+        int sum = 0;
+        for (int k = 0; k < N; k++)
+            sum += A[row * N + k] * B[k * N + col];
+        C[row * N + col] = sum;
+    }
+}
+int main() {
+    int size = N * N * sizeof(int);
+
+    int A[N*N], B[N*N], C[N*N];
+    for (int i = 0; i < N*N; i++) {
+        A[i] = 1;
+        B[i] = 1;
+    }
+    int *d_A, *d_B, *d_C;
+    cudaMalloc(&d_A, size);
+    cudaMalloc(&d_B, size);
+    cudaMalloc(&d_C, size);
+
+    cudaMemcpy(d_A, A, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, B, size, cudaMemcpyHostToDevice);
+
+    dim3 threads(16,16);
+    dim3 blocks((N+15)/16 , (N+15)/16);
+
+    matMul<<<blocks, threads>>>(d_A, d_B, d_C);
+
+    cudaMemcpy(C, d_C, size, cudaMemcpyDeviceToHost);
+
+    printf("C[0] = %d\n", C[0]);
+
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+
+    return 0;
+}
+
+
+
+17.CUDA device info
+#include <stdio.h>
+#include <cuda_runtime.h>
+int main() {
+    int count;
+    cudaGetDeviceCount(&count);
+    for (int i = 0; i < count; i++) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, i);
+
+        printf("Device %d: %s\n", i, prop.name);
+        printf("  Compute capability: %d.%d\n", prop.major, prop.minor);
+        printf("  Total global memory: %zu MB\n", prop.totalGlobalMem / (1024*1024));
+        printf("  Shared memory per block: %zu KB\n", prop.sharedMemPerBlock/1024);
+        printf("  Max threads per block: %d\n", prop.maxThreadsPerBlock);
+        printf("  Warp size: %d\n\n", prop.warpSize);
+	}
+
+    return 0;
+}
+
+
+
+

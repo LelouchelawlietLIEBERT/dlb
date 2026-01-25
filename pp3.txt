@@ -1,0 +1,22 @@
+%%writefile 3.c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    int n=1000000;
+    int arr[n];
+    for(int i=0;i<n;i++) arr[i]=1;
+
+    int threads[]={1,2,4,8};
+    for(int t=0;t<4;t++) {
+        omp_set_num_threads(threads[t]);
+        long long sum=0;
+
+        #pragma omp parallel for reduction(+:sum)
+        for(int i=0;i<n;i++) sum+=arr[i];
+
+        printf("Threads=%d Sum=%lld\n",threads[t],sum);
+    }
+}
+// for compilation : gcc 3.c -fopenmp -o 3
+// for execution : ./3

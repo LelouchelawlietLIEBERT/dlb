@@ -1,26 +1,62 @@
 %%writefile 8.c
-#include <mpi.h>
 #include <stdio.h>
+#include <string.h>
+#include <mpi.h>
 
-int main(int argc,char**argv){
-    MPI_Init(&argc,&argv);
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-
-    int x;
-    if(rank==0){
-        x=10;
-        MPI_Send(&x,1,MPI_INT,1,0,MPI_COMM_WORLD);
+int main(int argc, char *argv[]) {
+    int rank, size;
+    int data[5];
+    char message[100];
+    MPI_Status status;
+    
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    
+    if(rank == 0) {
+        printf("Point-to-Point Communication:\n");
+        for(int i = 0; i < 5; i++) {
+            data[i] = i * 10;
+        }
+        
+        for(int dest = 1; dest < size; dest++) {
+            MPI_Send(data, 5, MPI_INT, dest, 0, MPI_COMM_WORLD);
+            printf("Rank 0 sent data to rank %d\n", dest);
+        }
+        
+        for(int source = 1; source < size; source++) {
+            MPI_Recv(data, 5, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
+            printf("Rank 0 received from rank %d: ", source);
+            for(int i = 0; i < 5; i++) {
+                printf("%d ", data[i]);
+            }
+            printf("\n");
+        }
+    } else {
+        MPI_Recv(data, 5, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+        printf("Rank %d received data from rank 0\n", rank);
+        
+        for(int i = 0; i < 5; i++) {
+            data[i] += rank;
+        }
+        
+        MPI_Send(data, 5, MPI_INT, 0, 1, MPI_COMM_WORLD);
+        printf("Rank %d sent modified data back to rank 0\n", rank);
     }
-    if(rank==1){
-        MPI_Recv(&x,1,MPI_INT,0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-        printf("Received %d\n",x);
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    if(rank == 0) {
+        printf("\nBroadcast Communication:\n");
+        strcpy(message, "Hello from master!");
     }
-
-    MPI_Bcast(&x,1,MPI_INT,0,MPI_COMM_WORLD);
-    printf("Rank %d x=%d\n",rank,x);
-
+    
+    MPI_Bcast(message, 100, MPI_CHAR, 0, MPI_COMM_WORLD);
+    
+    printf("Rank %d received broadcast message: %s\n", rank, message);
+    
     MPI_Finalize();
+    return 0;
 }
-// execuion : mpicc 8.c -o 8
-// Run: mpirun -np 2 ./8
+// Compilation : mpicc 8.c -o 8
+// Run: ./8

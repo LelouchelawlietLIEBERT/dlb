@@ -1,0 +1,46 @@
+%%writefile 7.c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    int x = 0;
+
+    // Set number of threads (can vary this)
+    omp_set_num_threads(4);
+
+    printf("Starting Parallel Region\n\n");
+
+    #pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int total = omp_get_num_threads();
+        printf("Thread %d out of %d is active\n", tid, total);
+
+        #pragma omp single
+        {
+            printf("\n[SINGLE] Executed by Thread %d\n", tid);
+            printf("[SINGLE] Total threads = %d\n\n", total);
+        }
+
+        #pragma omp barrier
+
+
+        #pragma omp master
+        {
+            printf("[MASTER] Executed by Thread %d\n\n", tid);
+        }
+
+        #pragma omp critical
+        {
+            x++;
+            printf("[CRITICAL] Thread %d incremented x to %d\n", tid, x);
+        }
+    }
+
+    printf("\nParallel Region Finished\n");
+    printf("Final value of x = %d (should equal number of threads)\n", x);
+
+    return 0;
+}
+// for compilation : gcc 7.c -fopenmp -o 7
+// for execution : ./7

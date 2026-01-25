@@ -1,0 +1,50 @@
+%%writefile 6.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define N 500
+
+void matrix_multiply(int A[N][N], int B[N][N], int C[N][N], int threads) {
+    int i, j, k;
+    omp_set_num_threads(threads);
+    
+    #pragma omp parallel for private(i, j, k) shared(A, B, C)
+    for(i = 0; i < N; i++) {
+        for(j = 0; j < N; j++) {
+            C[i][j] = 0;
+            for(k = 0; k < N; k++) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
+
+int main() {
+    int (*A)[N] = malloc(sizeof(int[N][N]));
+    int (*B)[N] = malloc(sizeof(int[N][N]));
+    int (*C)[N] = malloc(sizeof(int[N][N]));
+    int i, j;
+    
+    for(i = 0; i < N; i++) {
+        for(j = 0; j < N; j++) {
+            A[i][j] = 1;
+            B[i][j] = 2;
+        }
+    }
+    
+    int thread_counts[] = {1, 2, 4, 8};
+    for(int t = 0; t < 4; t++) {
+        double start = omp_get_wtime();
+        matrix_multiply(A, B, C, thread_counts[t]);
+        double end = omp_get_wtime();
+        printf("Threads: %d, Time: %f seconds\n", thread_counts[t], end - start);
+    }
+    
+    free(A);
+    free(B);
+    free(C);
+    return 0;
+}
+// for compilation : gcc 6.c -fopenmp -o 6
+// for execution : ./6

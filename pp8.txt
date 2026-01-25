@@ -59,4 +59,4 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 // Compilation : mpicc 8.c -o 8
-// Run: ./8
+// Run: mpirun --allow-run-as-root --oversubscribe -np 4 ./8

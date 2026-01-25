@@ -1,0 +1,56 @@
+%%writefile 5.cu
+#include <stdio.h>
+#include <cuda_runtime.h>
+
+__global__ void kernel_demo() {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    printf("Block %d, Thread %d, Global ID %d\n", blockIdx.x, threadIdx.x, idx);
+}
+
+void print_gpu_properties() {
+    int deviceCount;
+    cudaGetDeviceCount(&deviceCount);
+    
+    printf("Number of CUDA devices: %d\n\n", deviceCount);
+    
+    for(int dev = 0; dev < deviceCount; dev++) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, dev);
+        
+        printf("Device %d: %s\n", dev, prop.name);
+        printf("  Compute capability: %d.%d\n", prop.major, prop.minor);
+        printf("  Total global memory: %lu MB\n", prop.totalGlobalMem / (1024 * 1024));
+        printf("  Shared memory per block: %lu KB\n", prop.sharedMemPerBlock / 1024);
+        printf("  Registers per block: %d\n", prop.regsPerBlock);
+        printf("  Warp size: %d\n", prop.warpSize);
+        printf("  Max threads per block: %d\n", prop.maxThreadsPerBlock);
+        printf("  Max threads dimensions: (%d, %d, %d)\n", 
+               prop.maxThreadsDim[0], prop.maxThreadsDim[1], prop.maxThreadsDim[2]);
+        printf("  Max grid dimensions: (%d, %d, %d)\n", 
+               prop.maxGridSize[0], prop.maxGridSize[1], prop.maxGridSize[2]);
+        printf("  Clock rate: %d MHz\n", prop.clockRate / 1000);
+        printf("  Multiprocessor count: %d\n\n", prop.multiProcessorCount);
+    }
+}
+
+int main() {
+    print_gpu_properties();
+    
+    printf("Testing different kernel configurations:\n\n");
+    
+    printf("Configuration 1: 2 blocks, 4 threads per block\n");
+    kernel_demo<<<2, 4>>>();
+    cudaDeviceSynchronize();
+    
+    printf("\nConfiguration 2: 4 blocks, 8 threads per block\n");
+    kernel_demo<<<4, 8>>>();
+    cudaDeviceSynchronize();
+    
+    printf("\nConfiguration 3: 1 block, 16 threads per block\n");
+    kernel_demo<<<1, 16>>>();
+    cudaDeviceSynchronize();
+    
+    return 0;
+}
+//for compilation : nvcc -o 5 5.cu -arch=sm_70
+//for execution : ./5
